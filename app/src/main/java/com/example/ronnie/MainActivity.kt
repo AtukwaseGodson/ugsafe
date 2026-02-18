@@ -1,6 +1,5 @@
 package com.example.ronnie
 
-import HomeScreen
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
@@ -56,19 +55,21 @@ class MainActivity : ComponentActivity() {
                             }
 
                             Screen.Preview -> {
-                                PreviewScreen(
-                                    imageUri = capturedUri!!,
-                                    onRetake = {
-                                        capturedUri = null
-                                        currentScreen = Screen.Camera
-                                    },
-                                    onConfirm = {
-                                        Toast.makeText(context, "Reported!", Toast.LENGTH_SHORT).show()
-                                        // Go back to home after finishing
-                                        currentScreen = Screen.Home
-                                        capturedUri = null
-                                    }
-                                )
+                                capturedUri?.let { uri ->
+                                    PreviewScreen(
+                                        imageUri = uri,
+                                        onRetake = {
+                                            capturedUri = null
+                                            currentScreen = Screen.Camera
+                                        },
+                                        onConfirm = {
+                                            Toast.makeText(context, "Reported!", Toast.LENGTH_SHORT).show()
+                                            // Go back to home after finishing
+                                            currentScreen = Screen.Home
+                                            capturedUri = null
+                                        }
+                                    )
+                                }
                             }
                         }
                     }

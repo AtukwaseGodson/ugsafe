@@ -1,6 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
-    // NOTE: org.jetbrains.kotlin.android is removed because it's built-in with AGP 9.0+
+    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 }
 

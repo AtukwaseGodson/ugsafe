@@ -39,8 +39,6 @@ fun HomeScreen(onNavigateToCamera: () -> Unit) {
                     .weight(0.25f)
             ) {
                 AsyncImage(
-                    // CHANGE: model now points to your local drawable file
-                    // Make sure the name matches the file you pasted (without extension)
                     model = R.drawable.incident_header,
                     contentDescription = "Incident Background",
                     modifier = Modifier.fillMaxSize(),
