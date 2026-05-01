@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.Color
 val DarkBg = Color(0xFF0D0D0D)
 val CardBg = Color(0xFF161618)
 val AccentRed = Color(0xFFE53935)
+val PoliceBlue = Color(0xFF1E88E5)
 val StatusGreen = Color(0xFF4CAF50)
 val TextGray = Color(0xFF9E9E9E)
 val BorderGray = Color(0xFF333333)
