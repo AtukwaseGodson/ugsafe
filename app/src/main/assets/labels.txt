@@ -1,5 +1,5 @@
-accidents
-fire_images
+accident
+fire
 neutral
-non_accident
-non_fire_images
+no_accident
+no_fire
