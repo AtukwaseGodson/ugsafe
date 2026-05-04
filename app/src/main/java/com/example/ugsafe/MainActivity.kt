@@ -77,13 +77,14 @@ class MainActivity : ComponentActivity() {
     fun MainScreen() {
         val context = LocalContext.current
         var classificationResult by remember { mutableStateOf("System Ready") }
-        var classificationDetail by remember { mutableStateOf("The AI monitor is active and scanning for hazards.") }
+        var classificationDetail by remember { mutableStateOf("The AI monitor is active and waiting to help in case of emergencies.") }
         var capturedBitmap by remember { mutableStateOf<Bitmap?>(null) }
         var isEmergency by remember { mutableStateOf(false) }
         var locationStatus by remember { mutableStateOf("Locating device...") }
         var reportStatus by remember { mutableStateOf("") }
         var nearbyHelpUrl by remember { mutableStateOf("") }
         var nearbyHelpType by remember { mutableStateOf("") }
+        var rawInference by remember { mutableStateOf("") }
 
         LaunchedEffect(Unit) {
             checkLocationStatus(context) { status -> locationStatus = status }
@@ -95,11 +96,12 @@ class MainActivity : ComponentActivity() {
             if (bitmap != null) {
                 capturedBitmap = bitmap
                 val rawOutput = runInference(bitmap)
+                rawInference = rawOutput
                 val label = rawOutput.split(" ").first()
                 val score = (rawOutput.substringAfter("(", "0").substringBefore("%").toFloatOrNull() ?: 0f) / 100f
 
-                val isFire = label.equals("fire_images", ignoreCase = true)
-                val isAccident = label.equals("accidents", ignoreCase = true)
+                val isFire = label.equals("fire", ignoreCase = true)
+                val isAccident = label.equals("accident", ignoreCase = true)
                 
                 isEmergency = (isFire || isAccident) && score >= 0.5f
 
@@ -109,9 +111,9 @@ class MainActivity : ComponentActivity() {
                     
                     classificationResult = "Emergency Detected"
                     classificationDetail = if (isFire) {
-                        "Critical fire hazard identified. Alerting the Fire Brigade immediately."
+                        "Critical fire hazard identified. Alerting the Fire Brigade immediately. please stay calm as we come to the rescue"
                     } else {
-                        "Road accident identified. Alerting the Police Department immediately."
+                        "Road accident identified. Alerting the Police Department immediately. Try finding the nearby hospital for the injured fellows"
                     }
                     
                     reportStatus = "Routing distress signal to $targetDept..."
@@ -126,7 +128,7 @@ class MainActivity : ComponentActivity() {
                         reportStatus = status
                     }
                 } else {
-                    classificationResult = "Environment Clear"
+                    classificationResult = label.replace("_", " ").uppercase()
                     classificationDetail = getDescriptiveResponse(label, score)
                     reportStatus = ""
                     nearbyHelpUrl = ""
@@ -176,16 +178,6 @@ class MainActivity : ComponentActivity() {
                             }
                             Text("AI-Powered Safety Network", color = TextGray, fontSize = 11.sp)
                         }
-                    }
-                    IconButton(
-                        onClick = { /* Notifications */ },
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(CardBg)
-                            .border(1.dp, Color.White.copy(alpha = 0.1f), CircleShape)
-                    ) {
-                        Icon(Icons.Outlined.Notifications, contentDescription = "Notifications", tint = Color.White)
                     }
                 }
 
@@ -264,6 +256,9 @@ class MainActivity : ComponentActivity() {
                                     fontWeight = FontWeight.ExtraBold
                                 )
                                 Text(classificationResult, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                                if (rawInference.isNotEmpty()) {
+                                    Text("AI Detection: $rawInference", color = Color(0xFFB39DDB), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Icon(Icons.Default.AutoGraph, contentDescription = null, tint = Color(0xFFB39DDB), modifier = Modifier.size(32.dp))
@@ -455,6 +450,16 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+
+                Text(
+                    text = "UgSafe AI can make mistakes. Always prioritize your safety and use professional judgment in emergencies.",
+                    color = TextGray.copy(alpha = 0.5f),
+                    fontSize = 11.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
             }
         }
     }
@@ -608,16 +613,18 @@ class MainActivity : ComponentActivity() {
 
     private fun getDescriptiveResponse(label: String, score: Float): String {
         return when {
-            score < 0.5f -> "The environment appears stable. AI monitoring is active and watching for potential hazards."
-            label.equals("fire_images", true) -> "Emergency Detected: Fire identified. We are alerting the rescue team now."
-            label.equals("accidents", true) -> "Incident Detected: Accident identified. Dispatching location to responders."
-            else -> "Everything looks safe. AI monitoring will continue to watch over you."
+            label.equals("fire", true) -> "Fire-related visuals detected (${(score * 100).toInt()}%). Monitoring situation."
+            label.equals("accident", true) -> "Potential traffic incident detected (${(score * 100).toInt()}%). Monitoring situation."
+            label.equals("no_fire", true) -> "The scene appears safe from thermal hazards."
+            label.equals("no_accident", true) -> "Traffic flow or the scene appears normal."
+            label.equals("neutral", true) -> "The environment is stable and safe."
+            else -> "Everything looks safe. The UGsafe AI will help you incase of emergency."
         }
     }
 
     private fun runInference(bitmap: Bitmap): String {
         return try {
-            val classifier = ImageClassifier.createFromFileAndOptions(this, "incident_detector.tflite", ImageClassifier.ImageClassifierOptions.builder().setMaxResults(1).setScoreThreshold(0.5f).build())
+            val classifier = ImageClassifier.createFromFileAndOptions(this, "incident_detector.tflite", ImageClassifier.ImageClassifierOptions.builder().setMaxResults(1).setScoreThreshold(0.1f).build())
             val results = classifier.classify(TensorImage.fromBitmap(bitmap))
             val top = results.firstOrNull()?.categories?.firstOrNull()
             if (top != null) "${top.label} (${(top.score * 100).toInt()}%)" else "Normal (0%)"
