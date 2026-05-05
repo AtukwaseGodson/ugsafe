@@ -446,7 +446,7 @@ class MainActivity : ComponentActivity() {
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text("Safe & Anonymous", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                            Text("Your reports are encrypted and sent securely to authorities.", color = TextGray, fontSize = 12.sp)
+                            Text("Your reports are encrypted and sent securely to responsible authorities.", color = TextGray, fontSize = 12.sp)
                         }
                     }
                 }
