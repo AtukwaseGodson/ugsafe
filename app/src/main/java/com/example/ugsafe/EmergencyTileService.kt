@@ -29,7 +29,7 @@ class EmergencyTileService : TileService() {
 
     override fun onStartListening() {
         super.onStartListening()
-        qsTile.label = "UgSafe Scan"
+        qsTile.label = "UGsafe Scan"
         qsTile.updateTile()
     }
 }

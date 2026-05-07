@@ -129,7 +129,7 @@ class MainActivity : ComponentActivity() {
 
         val builder = NotificationCompat.Builder(this, "EMERGENCY_CHANNEL")
             .setSmallIcon(R.drawable.ug_safe_app_icon)
-            .setContentTitle("UgSafe Emergency Monitor")
+            .setContentTitle("UGsafe Emergency Monitor")
             .setContentText("Tap for instant emergency scan")
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setContentIntent(pendingIntent)
@@ -171,7 +171,7 @@ class MainActivity : ComponentActivity() {
                 val label = rawOutput.substringBefore(" (").trim().lowercase()
                 val score = (rawOutput.substringAfter("(", "0").substringBefore("%").toFloatOrNull() ?: 0f) / 100f
 
-                val isFire = label == "fire_images"
+                val isFire = label == "fire images"
                 val isAccident = label == "accidents"
                 
                 Log.d("UGSAFE_AI", "Parsed Label: '$label', Score: $score, isFire: $isFire, isAccident: $isAccident")
@@ -257,7 +257,7 @@ class MainActivity : ComponentActivity() {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Image(
                             painter = painterResource(id = R.drawable.ug_safe_app_icon),
-                            contentDescription = "UgSafe Logo",
+                            contentDescription = "UGsafe Logo",
                             modifier = Modifier
                                 .size(54.dp)
                                 .clip(RoundedCornerShape(12.dp)),
@@ -266,7 +266,7 @@ class MainActivity : ComponentActivity() {
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Row {
-                                Text("Ug", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                                Text("UG", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
                                 Text("Safe", color = AccentRed, fontSize = 28.sp, fontWeight = FontWeight.Bold)
                             }
                             Text("AI-Powered Safety Network", color = TextGray, fontSize = 11.sp)
@@ -563,7 +563,7 @@ class MainActivity : ComponentActivity() {
                         Icon(Icons.Default.TouchApp, contentDescription = null, tint = Color(0xFFBB86FC), modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            "Pro Tip: Add the 'UgSafe Scan' tile to your phone's Quick Settings for instant emergency access, even from the lock screen.",
+                            "Pro Tip: Add the 'UGsafe Scan' tile to your phone's Quick Settings for instant emergency access, even from the lock screen.",
                             color = TextGray,
                             fontSize = 11.sp,
                             lineHeight = 15.sp
@@ -623,7 +623,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 Text(
-                    text = "UgSafe AI can make mistakes. Always prioritize your safety and use professional judgment in emergencies.",
+                    text = "UGsafe AI can make mistakes. Always prioritize your safety and use professional judgment in emergencies.",
                     color = TextGray.copy(alpha = 0.5f),
                     fontSize = 11.sp,
                     modifier = Modifier
@@ -666,7 +666,7 @@ class MainActivity : ComponentActivity() {
 
                     GuideSection(
                         title = "1. QUICK SETUP",
-                        content = "Add the 'UgSafe Scan' tile to your phone's Quick Settings. This allows you to launch the scanner instantly, even from the lock screen.",
+                        content = "Add the 'UGsafe Scan' tile to your phone's Quick Settings. This allows you to launch the scanner instantly, even from the lock screen.",
                         icon = Icons.Default.Settings
                     )
 

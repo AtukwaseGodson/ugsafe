@@ -46,6 +46,10 @@ android {
     }
 }
 
+base {
+    archivesName.set("UGsafe")
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
