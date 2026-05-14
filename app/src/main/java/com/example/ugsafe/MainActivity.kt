@@ -58,6 +58,8 @@ import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.example.ugsafe.ui.theme.*
 import com.google.android.gms.location.LocationServices
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FieldValue
 import org.json.JSONObject
 import org.tensorflow.lite.Interpreter
 import java.nio.ByteBuffer
@@ -66,6 +68,7 @@ import java.nio.channels.FileChannel
 import java.io.FileInputStream
 import java.io.ByteArrayOutputStream
 import java.util.Locale
+import java.util.UUID
 import kotlin.math.exp
 
 class MainActivity : ComponentActivity() {
@@ -78,6 +81,9 @@ class MainActivity : ComponentActivity() {
     // Authority Emails
     private val FIRE_BRIGADE_EMAIL = "mucureezioliviah@gmail.com"
     private val POLICE_DEPT_EMAIL = "atukwasegodson@gmail.com"
+
+    // Firestore instance
+    private val db = FirebaseFirestore.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -200,7 +206,7 @@ class MainActivity : ComponentActivity() {
                         nearbyHelpType = if (isFire) "Fire Station" else "Hospital"
                     }
 
-                    sendAnonymousReport(context, if(isFire) "Fire" else "Road Accident", targetDept, targetEmail, bitmap) { status ->
+                    sendAnonymousReport(context, if(isFire) "Fire" else "Road Accident", score, targetDept, targetEmail, bitmap) { status ->
                         reportStatus = status
                     }
                 } else {
@@ -397,9 +403,9 @@ class MainActivity : ComponentActivity() {
                                 }
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Text(
-                                    reportStatus, 
-                                    color = Color.White, 
-                                    fontSize = 13.sp, 
+                                    reportStatus,
+                                    color = Color.White,
+                                    fontSize = 13.sp,
                                     fontWeight = FontWeight.Medium,
                                     lineHeight = 18.sp
                                 )
@@ -412,7 +418,7 @@ class MainActivity : ComponentActivity() {
                     Spacer(modifier = Modifier.height(24.dp))
                     Text("STRANGER'S EMERGENCY GUIDE", color = TextGray, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
                     Spacer(modifier = Modifier.height(16.dp))
-                    
+
                     Button(
                         onClick = {
                             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(nearbyHelpUrl))
@@ -432,9 +438,9 @@ class MainActivity : ComponentActivity() {
                             Icon(Icons.Default.ChevronRight, contentDescription = null)
                         }
                     }
-                    
+
                     Spacer(modifier = Modifier.height(12.dp))
-                    
+
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Button(
                             onClick = {
@@ -689,7 +695,7 @@ class MainActivity : ComponentActivity() {
                     )
 
                     Spacer(modifier = Modifier.height(32.dp))
-                    
+
                     Button(
                         onClick = onDismiss,
                         modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -698,7 +704,7 @@ class MainActivity : ComponentActivity() {
                     ) {
                         Text("GOT IT", fontWeight = FontWeight.Bold)
                     }
-                    
+
                     Spacer(modifier = Modifier.height(24.dp))
                 }
             }
@@ -817,7 +823,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @SuppressLint("MissingPermission")
-    private fun sendAnonymousReport(context: android.content.Context, incidentType: String, targetDept: String, targetEmail: String, bitmap: Bitmap, onStatusUpdate: (String) -> Unit) {
+    private fun sendAnonymousReport(context: android.content.Context, incidentType: String, confidenceScore: Float, targetDept: String, targetEmail: String, bitmap: Bitmap, onStatusUpdate: (String) -> Unit) {
         val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
         val hasFineLocation = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val hasCoarseLocation = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
@@ -827,15 +833,15 @@ class MainActivity : ComponentActivity() {
                 .addOnSuccessListener { location: android.location.Location? ->
                     val locLink = if (location != null) "https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}"
                     else "Location Unavailable"
-                    postToEmailJS(context, incidentType, targetDept, targetEmail, bitmap, locLink, onStatusUpdate)
+                    postToEmailJS(context, incidentType, confidenceScore, targetDept, targetEmail, bitmap, locLink, onStatusUpdate)
                 }
-                .addOnFailureListener { postToEmailJS(context, incidentType, targetDept, targetEmail, bitmap, "Location Error", onStatusUpdate) }
+                .addOnFailureListener { postToEmailJS(context, incidentType, confidenceScore, targetDept, targetEmail, bitmap, "Location Error", onStatusUpdate) }
         } else {
-            postToEmailJS(context, incidentType, targetDept, targetEmail, bitmap, "Permission Denied", onStatusUpdate)
+            postToEmailJS(context, incidentType, confidenceScore, targetDept, targetEmail, bitmap, "Permission Denied", onStatusUpdate)
         }
     }
 
-    private fun postToEmailJS(context: android.content.Context, type: String, targetDept: String, targetEmail: String, bitmap: Bitmap, mapsLink: String, onStatusUpdate: (String) -> Unit) {
+    private fun postToEmailJS(context: android.content.Context, type: String, confidenceScore: Float, targetDept: String, targetEmail: String, bitmap: Bitmap, mapsLink: String, onStatusUpdate: (String) -> Unit) {
         val scaledBitmap = if (bitmap.width > 400) {
             val ratio = 400f / bitmap.width
             Bitmap.createScaledBitmap(bitmap, 400, (bitmap.height * ratio).toInt(), true)
@@ -844,6 +850,15 @@ class MainActivity : ComponentActivity() {
         val stream = ByteArrayOutputStream()
         scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 20, stream)
         val base64Data = Base64.encodeToString(stream.toByteArray(), Base64.NO_WRAP)
+        val base64ImageString = "data:image/jpeg;base64,$base64Data"
+
+        // Firestore Trigger (Backup record)
+        sendReportToCloud(
+            incidentType = type,
+            confidenceScore = confidenceScore,
+            locationLink = mapsLink,
+            base64Image = base64ImageString
+        )
 
         val json = JSONObject().apply {
             put("service_id", SERVICE_ID)
@@ -855,7 +870,7 @@ class MainActivity : ComponentActivity() {
                 put("to_email", targetEmail)
                 put("location_link", mapsLink)
                 put("device_info", "${Build.MANUFACTURER} ${Build.MODEL}")
-                put("image_data", "data:image/jpeg;base64,$base64Data")
+                put("image_data", base64ImageString)
             })
         }
 
@@ -867,7 +882,6 @@ class MainActivity : ComponentActivity() {
             },
             { error ->
                 Log.e("UGSAFE", "EmailJS Error: ${error.message}")
-                // Check if it's a false negative (EmailJS sometimes returns "OK" which Volley can't parse as JSON if using JsonObjectRequest, but here we use StringRequest)
                 onStatusUpdate("Alert failed to send automatically. Please dial 999 immediately.")
             }
         ) {
@@ -881,6 +895,32 @@ class MainActivity : ComponentActivity() {
             }
         }
         queue.add(request)
+    }
+
+    private fun sendReportToCloud(incidentType: String, confidenceScore: Float, locationLink: String, base64Image: String) {
+        // 1. Generate unique ID in the app
+        val uniqueId = UUID.randomUUID().toString()
+        
+        val report = hashMapOf(
+            "incidentId" to uniqueId, // 2. Put ID inside the report
+            "incidentType" to incidentType,
+            "confidenceScore" to confidenceScore,
+            "locationLink" to locationLink,
+            "image" to base64Image,
+            "timestamp" to FieldValue.serverTimestamp(),
+            "deviceInfo" to "${Build.MANUFACTURER} ${Build.MODEL}"
+        )
+
+        // 3. Save to a document named [uniqueId]
+        db.collection("incidents")
+            .document(uniqueId)
+            .set(report)
+            .addOnSuccessListener {
+                Log.d("UGSAFE_FIREBASE", "Report saved with ID: $uniqueId")
+            }
+            .addOnFailureListener { e ->
+                Log.e("UGSAFE_FIREBASE", "Error saving report with ID: $uniqueId", e)
+            }
     }
 
     private fun saveBitmapToGallery(context: Context, bitmap: Bitmap) {
@@ -950,7 +990,7 @@ class MainActivity : ComponentActivity() {
                 val r = (pixel shr 16) and 0xFF
                 val g = (pixel shr 8) and 0xFF
                 val b = pixel and 0xFF
-                
+
                 // Strict Float32 math
                 inputBuffer.putFloat((r.toFloat() - 127.5f) / 127.5f)
                 inputBuffer.putFloat((g.toFloat() - 127.5f) / 127.5f)
@@ -959,14 +999,14 @@ class MainActivity : ComponentActivity() {
 
             // 4. Output Handling (Matches your 5-class model)
             val output = Array(1) { FloatArray(5) }
-            
+
             // 5. Run Inference
             interpreter.run(inputBuffer, output)
 
             // 6. Read Results
             val rawResults = output[0]
             val classLabels = listOf("accidents", "fire_images", "neutral", "non_accident", "non_fire_images")
-            
+
             // Debug Logs: Observe raw values from the model
             rawResults.forEachIndexed { index, score ->
                 Log.d("UGSAFE_DEBUG", "Class: ${classLabels.getOrElse(index) { "#$index" }}, Raw Score: $score")
@@ -984,7 +1024,7 @@ class MainActivity : ComponentActivity() {
 
             val topLabel = classLabels.getOrElse(maxIdx) { "unknown" }
             interpreter.close()
-            
+
             Log.d("UGSAFE_AI", "Final Decision: $topLabel ($maxProb)")
 
             "${topLabel.replace("_", " ").uppercase()} (${(maxProb * 100).toInt()}%)"
